@@ -93,7 +93,7 @@ written by Petter Larsson and Eric Palmer.
 You are now given a threaded implementation of the Sepia program in the
 `mt_sepia.c` file. You have to study the code to figure out how the POSIX
 Threads interface is being used to utilize the power of a multicore/cpu machine.
-After that you have to port your inline assembly code from Part 1-2, recompiler
+After that, you have to port your inline assembly code from Part 1-2, recompiler
 the program with the extra `-pthread` flag, and ensure that everything still
 works.
 
@@ -119,9 +119,9 @@ works.
 
 ## Part 2-2, The Threaded Brightness and Contrast Filter
 
-In this part you have to create a multithreaded version of the brightness and
+In this part, you have to create a multithreaded version of the brightness and
 contrast filter. Create a copy of the `brightness.c` file under the name
-`mt_brightness.c`. Use `mt_sepia.c` to help you to make the `mt_brightness.c`
+`mt_brightness.c`. Use `mt_sepia.c` to help you make the `mt_brightness.c`
 utilize all the threads of your test machine.
 
 ### Tasks
@@ -129,7 +129,7 @@ utilize all the threads of your test machine.
 1. Create the `mt_brightness.c` file from `brightness.c`.
 
 3. Make the multithreaded version of the code with the help of PThreads. Use
-   `mt_sepia.c` and all the given extra header files to help you to make the
+   `mt_sepia.c` and all the given extra header files to help you make the
    code multithreaded.
 
 4. Test the code on a machine with AVX512 support.
