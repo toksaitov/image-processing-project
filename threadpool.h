@@ -69,12 +69,23 @@ typedef struct _threadpool
 
     pthread_t *threads;
     size_t thread_count;
+    unsigned long request_to_terminate;
 } threadpool_t;
+
+static inline bool check_if_signaled(unsigned int event)
+{
+    return event > 0;
+}
 
 static void *_thread_start(void *args)
 {
-    sync_queue_t *queue = (sync_queue_t *) args;
+    threadpool_t *threadpool = (threadpool_t *) args;
+    sync_queue_t *queue = threadpool->queue;
     while (true) {
+        if(check_if_signaled(threadpool->request_to_terminate))
+        {
+            break;
+        }
         work_item_t *work_item = (work_item_t *) sync_queue_pop(queue);
         if (NULL == work_item) {
             continue;
@@ -94,6 +105,7 @@ static inline threadpool_t *threadpool_allocate(void)
 
 static threadpool_t *threadpool_init(threadpool_t *threadpool, size_t pool_size)
 {
+    threadpool->request_to_terminate = 0;
     threadpool->thread_count =
         pool_size;
 
@@ -115,7 +127,7 @@ static threadpool_t *threadpool_init(threadpool_t *threadpool, size_t pool_size)
             &threadpool->threads[i],
             NULL,
             _thread_start,
-            (void *) threadpool->queue
+            (void *) threadpool
         );
     }
 
@@ -131,6 +143,7 @@ static inline threadpool_t *threadpool_create(size_t pool_size)
 
     if (NULL == threadpool_init(threadpool, pool_size)) {
         free(threadpool);
+        threadpool = NULL;
 
         return NULL;
     }
@@ -140,6 +153,7 @@ static inline threadpool_t *threadpool_create(size_t pool_size)
 
 static void threadpool_destroy(threadpool_t *threadpool)
 {
+    __sync_add_and_fetch(&threadpool->request_to_terminate, 1);
     if (NULL == threadpool) {
         return;
     }
@@ -159,6 +173,7 @@ static void threadpool_destroy(threadpool_t *threadpool)
     }
 
     free(threadpool);
+    threadpool = NULL;
 }
 
 static inline void threadpool_enqueue_task(

@@ -7,6 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <errno.h>
+
+#define QUEUE_NOT_EMPTY 0
+#define QUEUE_EMPTY 1
+#define QUEUE_LOCK_ERR -1
+#define QUEUE_UNLOCK_ERR -2
 
 typedef struct _sync_queue
 {
@@ -45,6 +51,7 @@ static inline sync_queue_t *sync_queue_create()
 
     if (NULL == sync_queue_init(queue)) {
         free(queue);
+        queue = NULL;
 
         return NULL;
     }
@@ -60,18 +67,40 @@ static inline void sync_queue_destroy(sync_queue_t *queue)
 
     pthread_mutex_destroy(&queue->access_mutex);
     pthread_cond_destroy(&queue->not_empty_condition);
-    queue_destroy(&queue->implementation);
+    //Queue is allocated on stack, not heap; Thus queue_destroy is replaced;
+    queue_deinit(&queue->implementation);
     free(queue);
+    queue = NULL;
 }
 
-static inline size_t sync_queue_get_size(sync_queue_t *queue)
+static inline ssize_t sync_queue_get_size(sync_queue_t *queue)
 {
-    return (size_t) queue_get_size(&queue->implementation);
+    if (0 != pthread_mutex_lock(&queue->access_mutex)) {
+        return QUEUE_LOCK_ERR;
+    }
+
+    ssize_t res = (ssize_t) queue_get_size(&queue->implementation);
+
+    if (0 != pthread_mutex_unlock(&queue->access_mutex)) {
+        return QUEUE_UNLOCK_ERR;
+    }
+
+    return res;
 }
 
-static inline bool sync_queue_is_empty(sync_queue_t *queue)
+static inline int sync_queue_is_empty(sync_queue_t *queue)
 {
-    return queue_is_empty(&queue->implementation);
+    if (0 != pthread_mutex_lock(&queue->access_mutex)) {
+        return QUEUE_LOCK_ERR;
+    }
+
+    int res = (queue_is_empty(&queue->implementation) ? QUEUE_EMPTY : QUEUE_NOT_EMPTY);
+
+    if (0 != pthread_mutex_unlock(&queue->access_mutex)) {
+        return QUEUE_UNLOCK_ERR;
+    }
+    
+    return res;
 }
 
 static sync_queue_t *sync_queue_enqueue(sync_queue_t *queue, void *data)
@@ -98,9 +127,18 @@ static void *sync_queue_pop(sync_queue_t *queue)
         return data;
     }
 
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += 1;
+
     while (queue_is_empty(&queue->implementation)) {
-        if (0 != pthread_cond_wait(&queue->not_empty_condition, &queue->access_mutex)) {
+        int res = pthread_cond_timedwait(&queue->not_empty_condition, &queue->access_mutex, &ts);
+        if (0 != res && res != ETIMEDOUT) {
             return data;
+        }
+        else if(res == ETIMEDOUT)
+        {
+            break;
         }
     }
 
