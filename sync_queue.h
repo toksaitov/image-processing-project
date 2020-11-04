@@ -63,7 +63,7 @@ static inline void sync_queue_destroy(sync_queue_t *queue)
     pthread_mutex_destroy(&queue->access_mutex);
     pthread_cond_destroy(&queue->not_empty_condition);
     //Queue is allocated on stack, not heap; Thus queue_destroy is replaced;
-    queue_deinit(&queue->implementation);  
+    queue_deinit(&queue->implementation);
     free(queue);
     queue = NULL;
 }
