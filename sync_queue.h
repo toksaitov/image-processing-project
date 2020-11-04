@@ -9,6 +9,11 @@
 #include <pthread.h>
 #include <errno.h>
 
+#define QUEUE_NOT_EMPTY 0
+#define QUEUE_EMPTY 1
+#define QUEUE_LOCK_ERR -1
+#define QUEUE_UNLOCK_ERR -2
+
 typedef struct _sync_queue
 {
     pthread_mutex_t access_mutex;
@@ -68,14 +73,34 @@ static inline void sync_queue_destroy(sync_queue_t *queue)
     queue = NULL;
 }
 
-static inline size_t sync_queue_get_size(sync_queue_t *queue)
+static inline ssize_t sync_queue_get_size(sync_queue_t *queue)
 {
-    return (size_t) queue_get_size(&queue->implementation);
+    if (0 != pthread_mutex_lock(&queue->access_mutex)) {
+        return QUEUE_LOCK_ERR;
+    }
+
+    ssize_t res = (ssize_t) queue_get_size(&queue->implementation);
+
+    if (0 != pthread_mutex_unlock(&queue->access_mutex)) {
+        return QUEUE_UNLOCK_ERR;
+    }
+
+    return res;
 }
 
-static inline bool sync_queue_is_empty(sync_queue_t *queue)
+static inline int sync_queue_is_empty(sync_queue_t *queue)
 {
-    return queue_is_empty(&queue->implementation);
+    if (0 != pthread_mutex_lock(&queue->access_mutex)) {
+        return QUEUE_LOCK_ERR;
+    }
+
+    int res = (queue_is_empty(&queue->implementation) ? QUEUE_EMPTY : QUEUE_NOT_EMPTY);
+
+    if (0 != pthread_mutex_unlock(&queue->access_mutex)) {
+        return QUEUE_UNLOCK_ERR;
+    }
+    
+    return res;
 }
 
 static sync_queue_t *sync_queue_enqueue(sync_queue_t *queue, void *data)
