@@ -32,6 +32,7 @@ static inline void work_item_destroy(work_item_t *work_item)
 {
     if (NULL != work_item) {
         free(work_item);
+        work_item = NULL;
     }
 }
 

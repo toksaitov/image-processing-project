@@ -39,6 +39,7 @@ static inline void queue_item_destroy(queue_item_t *queue_item)
 {
     if (NULL != queue_item) {
         free(queue_item);
+        queue_item = NULL;
     }
 }
 
@@ -91,6 +92,7 @@ static inline void queue_destroy(queue_t *queue)
         }
 
         free(queue);
+        queue = NULL;
     }
 }
 
@@ -105,6 +107,7 @@ static inline void queue_deinit(queue_t *queue)
             item = next;
         }
     }
+    queue->size = 0;
 }
 
 static inline void queue_destroy_with_elements(
@@ -122,6 +125,7 @@ static inline void queue_destroy_with_elements(
             item = next;
         }
         free(queue);
+        queue = NULL;
     }
 }
 
@@ -140,6 +144,7 @@ static inline void queue_deinit_with_elements(
             item = next;
         }
     }
+    queue->size = 0;
 }
 
 static inline size_t queue_get_size(queue_t *queue)

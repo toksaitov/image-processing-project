@@ -222,6 +222,7 @@ int main(int argc, char *argv[])
         }
 
         while (!barrier_sense) { }
+        threadpool_destroy(threadpool);    
     }
 
     bmp_write_image_data(destination_descriptor, &image, &error_message);
